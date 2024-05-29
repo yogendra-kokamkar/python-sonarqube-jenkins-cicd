@@ -1,0 +1,84 @@
+pipeline {
+    agent any
+
+    environment {
+        VENV = 'venv'
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checkout the code from your GitHub
+                git branch: 'main', url: 'git@github.com:yogendra-kokamkar/python-sonarqube-jenkins-cicd.git'
+            }
+        }
+
+        stage('Setup') {
+            steps {
+                // Setup python virtual environment to install libraries
+                sh '''
+                    python3 -m venv ${VENV}
+                    . ${VENV}/bin/activate
+                    pip install -r requirements.txt
+                '''
+            }
+        }
+
+        stage('Unit Test') {
+            steps {
+                // Run unit tests (e.g., using pytest)
+                sh '''
+                    . ${VENV}/bin/activate
+                    python3 -m pytest -q test/test_wallet.py --junitxml=test_results.xml
+                '''
+            }
+        }
+
+        stage('Code Coverage') {
+            steps {
+                // Generate Code Coverage Report
+                sh '''
+                    . ${VENV}/bin/activate
+                    python3 -m coverage run -m pytest -q test/test_wallet.py
+                    python3 -m coverage xml -o coverage.xml
+                '''
+            }
+        }
+
+        stage('Sonar Scan') {
+            steps {
+                // Set Quality Gate and perform SonarQube Scan
+                withCredentials([string(credentialsId: 'SONAR_TOKEN', variable: 'SONAR_TOKEN'),string(credentialsId: 'SONAR_URL', variable: 'SONAR_URL')]) {
+                    sh 'curl -u $SONAR_TOKEN: -X POST "$SONAR_URL/api/qualitygates/select" -d "projectKey=your-project-key" -d "gateId=your-gate-id"'
+                    sh 'npx sonar-scanner -Dsonar.login=${SONAR_TOKEN}'
+                }
+            }
+        }
+        
+    }
+
+    post {
+        success {
+            // Send notification if the build is successful
+            emailext (
+            subject: "Build Successful: ${currentBuild.fullDisplayName}",
+            body: "The build succeeded. You can access the build at ${env.BUILD_URL}",
+            to: "example@email.com"
+        )
+        }
+
+        failure {
+            // Send notification if the build fails
+            emailext (
+            subject: "Build Failed: ${currentBuild.fullDisplayName}",
+            body: "The build failed. You can access the build at ${env.BUILD_URL}",
+            to: "example@email.com"
+        )
+        }
+
+        cleanup {
+            // Remove the virtual environment
+            sh 'rm -rf venv'
+        }
+    }
+}
