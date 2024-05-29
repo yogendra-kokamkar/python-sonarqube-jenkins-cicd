@@ -1,5 +1,7 @@
 # Jenkins CI Pipeline for Python Project and SonarQube
 
+![python-unittest-sonarqube-jenkins](https://github.com/yogendra-kokamkar/python-sonarqube-jenkins-cicd/assets/55878086/09319bd0-0f45-48b5-b52b-7c1e296e973f)
+
 This repository contains the configuration for a Jenkins CI pipeline that performs the following tasks:
 1. Checks in Python code.
 2. Performs unit tests.
